@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>OpenFusion Server Map</title>
+        <style>
+            html, body {
+                width: 100%;
+                height: 100%;
+                background-color: red;
+                overflow: hidden;
+                margin: 0;
+                padding: 0;
+            }
+
+            #main {
+                width: 100%;
+                height: 100%;
+                background-color: black;
+            }
+
+            #source {
+                display: none;
+            }
+        </style>
+        <script>
+
+            document.addEventListener("click", onClick);
+            var canvas;
+            var x = 0.5;
+            var y = 0.5;
+            var zoom = 1;
+
+            function initialize() {
+                canvas = document.getElementById("main");
+                
+                fitCanvas();
+                paint();
+            }
+
+            function fitCanvas() {
+                canvas.width = document.body.clientWidth;
+                canvas.height = document.body.clientHeight;
+                paint();
+            }
+
+            function getCtx() {
+                var ctx = canvas.getContext("2d");
+                ctx.fillStyle = "#FFFFFF";
+                ctx.translate(0, 0.5);
+                return ctx;
+            }
+
+            function onClick(e) {
+                //console.log(e.clientX + ", " + e.clientY);
+                //x = e.clientX / canvas.clientWidth;
+                //y = e.clientY / canvas.clientHeight;
+                //console.log(x + ", " + y);
+                //zoom += 1;
+                paint();
+            }
+
+            function paint() {
+                var ctx = getCtx(canvas);
+                w = canvas.width;
+                h = canvas.height;
+
+                ctx.fillStyle = "#000";
+                ctx.fillRect(0, 0, w, h);
+                
+                var map = document.getElementById("source");
+                var mh = h;
+                var mw = mh * (map.width / map.height);
+
+                mh *= zoom;
+                mw *= zoom;
+
+                var cx = mw * x;
+                var cy = mh * y;
+
+                ctx.drawImage(map, w/2 - cx, h/2 - cy, mw, mh);
+            }
+        </script>
+    </head>
+    <body onload="initialize()" onresize="fitCanvas()">
+        <img id="source" src="res/img/ffmap.png" />
+        <canvas id="main"></canvas>
+    </body>
+</html>
