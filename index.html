@@ -1,91 +1,95 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>OpenFusion Server Map</title>
-        <style>
-            html, body {
-                width: 100%;
-                height: 100%;
-                background-color: red;
-                overflow: hidden;
-                margin: 0;
-                padding: 0;
-            }
+	<head>
+		<title>OpenFusion Server Map</title>
+		<style>
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				background-color: red;
+				overflow: hidden;
+				margin: 0;
+				padding: 0;
+			}
 
-            #main {
-                width: 100%;
-                height: 100%;
-                background-color: black;
-            }
+			#main {
+				width: 100%;
+				height: 100%;
+				background-color: black;
+			}
 
-            #source {
-                display: none;
-            }
-        </style>
-        <script>
+			#source {
+				display: none;
+			}
+		</style>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			document.addEventListener("click", onClick);
+			var canvas;
+			var zoom = 1;
+			var x = 0.5;
+			var y = 0.5;
+			var socket;
 
-            document.addEventListener("click", onClick);
-            var canvas;
-            var zoom = 1;
-            var x = 0.5;
-            var y = 0.5;
+			function initialize() {
+				socket = io();
 
-            function initialize() {
-                canvas = document.getElementById("main");
-                canvas.oncontextmenu = function(e) { 
-                    if(zoom > 1)
-                        zoom -= 1;
-                    paint();
-                    return false;
-                }
+				canvas = document.getElementById("main");
+				canvas.oncontextmenu = function (e) {
+					if (zoom > 1) zoom -= 1;
+					paint();
+					return false;
+				};
 
-                var ctx = canvas.getContext("2d");
-                ctx.fillStyle = "#FFFFFF";
-                //ctx.translate(0.5, 0);
-                
-                fitCanvas();
-                paint();
-            }
+				var ctx = canvas.getContext("2d");
+				ctx.fillStyle = "#FFFFFF";
+				//ctx.translate(0.5, 0);
 
-            function fitCanvas() {
-                canvas.width = document.body.clientWidth;
-                canvas.height = document.body.clientHeight;
-                paint();
-            }
+				fitCanvas();
+				paint();
+			}
 
-            function onClick(e) {
-                console.log(e.clientX + ", " + e.clientY);
-                var ex = e.clientX;
-                var ey = e.clientY;
-                
-                zoom += 1;
-                paint();
-            }
+			function fitCanvas() {
+				canvas.width = document.body.clientWidth;
+				canvas.height = document.body.clientHeight;
+				paint();
+			}
 
-            function paint() {
-                var ctx = canvas.getContext("2d");
-                w = canvas.width;
-                h = canvas.height;
+			function onClick(e) {
+				console.log(e.clientX + ", " + e.clientY);
+				var ex = e.clientX;
+				var ey = e.clientY;
 
-                ctx.fillStyle = "#000";
-                ctx.fillRect(0, 0, w, h);
-                
-                var map = document.getElementById("source");
-                var mh = h;
-                var mw = mh * (map.width / map.height);
+				zoom += 1;
+				paint();
+				socket.emit("poll");
+			}
 
-                mh *= zoom;
-                mw *= zoom;
+			function paint() {
+				var ctx = canvas.getContext("2d");
+				w = canvas.width;
+				h = canvas.height;
 
-                var cx = mw * x;
-                var cy = mh * y;
+				ctx.fillStyle = "#000";
+				ctx.fillRect(0, 0, w, h);
 
-                ctx.drawImage(map, w/2 - cx, h/2 - cy, mw, mh);
-            }
-        </script>
-    </head>
-    <body onload="initialize()" onresize="fitCanvas()">
-        <img id="source" src="res/img/ffmap.png" />
-        <canvas id="main"></canvas>
-    </body>
+				var map = document.getElementById("source");
+				var mh = h;
+				var mw = mh * (map.width / map.height);
+
+				mh *= zoom;
+				mw *= zoom;
+
+				var cx = mw * x;
+				var cy = mh * y;
+
+				ctx.drawImage(map, w / 2 - cx, h / 2 - cy, mw, mh);
+			}
+		</script>
+	</head>
+	<body onload="initialize()" onresize="fitCanvas()">
+		<img id="source" src="res/img/ffmap.png" />
+		<canvas id="main"></canvas>
+	</body>
 </html>
