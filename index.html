@@ -58,6 +58,8 @@
 			var ip;
 			var connected;
 
+			var players = [];
+
 			// constants
 			const tps = 60;
 			const tickrate = 1000 / tps;
@@ -90,6 +92,9 @@
 			line2.src = "res/img/line_main00.png";
 			var line3 = new Image();
 			line3.src = "res/img/line_main01.png";
+
+			var iconPlayer = new Image();
+			iconPlayer.src = "res/img/face_yellow.png";
 
 			var clickSounds = [new Audio("res/snd/mouse_click01.ogg"), new Audio("res/snd/mouse_click02.ogg"), new Audio("res/snd/mouse_click03.ogg"), new Audio("res/snd/mouse_click04.ogg"), new Audio("res/snd/mouse_click05.ogg")];
 			var zoomOutSound = new Audio("res/snd/height_down.ogg");
@@ -194,6 +199,16 @@
 				socket.on("payload", function(pl) {
 					connected = true;
 					console.log(pl);
+					pl = pl.split('\n');
+					var start = pl.indexOf("begin") + 1;
+					var end = pl.indexOf("end");
+					if(start > 0 && end >= start) {
+						players = pl.slice(start, end);
+						console.log(players);
+					} else {
+						console.log("bad payload");
+					}
+					
 				});
 				socket.on("dc", function() {
 					connected = false;
@@ -294,6 +309,34 @@
 				if(socket.connected && connected) {
 					ctx.drawImage(map, x - mapW / 2, y - mapH / 2, mapW, mapH,
 								frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
+
+					// icons
+					for(var i = 0; i < players.length; i++) {
+						// map game coords to image coords (ty @dongresource)
+						var tokens = players[i].split(' ');
+						if(tokens.length < 5 || tokens[0] != "player")
+							continue;
+						var px = parseInt(tokens[1]);
+						var py = parseInt(tokens[2]);
+						px = px * 2048 / (16 * 51200);
+						py = py * 2048 / (16 * 51200);
+						if (px >= 2048 || py >= 2048 || px < 0 || py < 0)
+							continue;
+						py = 2048 - py;
+
+						var minX = x - mapW / 2;
+						var minY = y - mapH / 2;
+						var pFracX = (px - minX) / mapW;
+						var pFracY = (py - minY) / mapH;
+						if(pFracX < 0 || pFracX > 1 || pFracY < 0 || pFracY > 1)
+							continue;
+
+						var size = iconPlayer.width * Math.sqrt(zoom);
+						
+						ctx.drawImage(iconPlayer, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
+													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
+													size, size);
+					}
 				} else {
 					ctx.drawImage(fuzz[0], frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
 				}
