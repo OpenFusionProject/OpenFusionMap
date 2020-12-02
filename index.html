@@ -48,13 +48,15 @@
 			var mapH;
 			var mapW;
 
+			var counter;
 			var scan2;
 			var timeout2;
 			var scan3;
 			var timeout3;
 
 			var socket;
-			var ip = "127.0.0.1";
+			var ip;
+			var connected;
 
 			// constants
 			const tps = 60;
@@ -75,6 +77,12 @@
 
 			var map = new Image();
 			map.src = "res/img/ff_full.png";
+
+			var fuzz = [new Image(), new Image(), new Image(), new Image()];
+			fuzz[0].src = "res/img/no_map0.png";
+			fuzz[1].src = "res/img/no_map1.png";
+			fuzz[2].src = "res/img/no_map2.png";
+			fuzz[3].src = "res/img/no_map3.png";
 
 			var line1 = new Image();
 			line1.src = "res/img/line_main.png";
@@ -128,6 +136,9 @@
 			}
 
 			function tick() {
+				counter++;
+				if(counter > 3) counter = 0;
+
 				if(timeout2 > 0) {
 					timeout2--;
 				} else {
@@ -173,7 +184,20 @@
 			}
 
 			function initialize() {
-				//socket = io();
+				socket = io();
+				ip = "";
+				connected = true;
+				socket.on("addr", function(addr) {
+					console.log(addr);
+					ip = addr;
+				});
+				socket.on("payload", function(pl) {
+					connected = true;
+					console.log(pl);
+				});
+				socket.on("dc", function() {
+					connected = false;
+				});
 
 				document.addEventListener("click", onClick);
 				document.addEventListener("wheel", onWheel);
@@ -210,6 +234,7 @@
 
 				fitCanvas();
 
+				counter = 0;
 				setInterval(tick, tickrate);
 			}
 
@@ -238,8 +263,6 @@
 				*/
 
 				scan2 = frameMinY - line2.height / 2;
-
-				paint();
 			}
 
 			function onClick(e) {
@@ -268,8 +291,12 @@
 				ctx.fillRect(frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
 
 				// map
-				ctx.drawImage(map, x - mapW / 2, y - mapH / 2, mapW, mapH,
+				if(socket.connected && connected) {
+					ctx.drawImage(map, x - mapW / 2, y - mapH / 2, mapW, mapH,
 								frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
+				} else {
+					ctx.drawImage(fuzz[0], frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
+				}
 
 				// lines
 				ctx.drawImage(line1, frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
@@ -282,7 +309,14 @@
 				// text
 				ctx.fillStyle = "#FFF";
 				ctx.font = "30px Courier New";
-				ctx.fillText(ip, frameMinX, frameMinY - inset / 4);
+				ctx.textAlign = "left";
+				ctx.fillText(ip, frameMinX, frameMinY - inset);
+
+				if(!socket.connected || !connected) {
+					ctx.font = "22px Courier New";
+					ctx.textAlign = "center";
+					ctx.fillText("Reconnecting...", frameMinX + frameW / 2, frameMinY + frameH / 2);
+				}
 			}
 		</script>
 	</head>

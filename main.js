@@ -4,23 +4,46 @@ var http = require("http").createServer(app);
 var io = require("socket.io")(http);
 var net = require("net");
 
+var ip = "127.0.0.1";
+
 var options = {
-	port: 8002,
-	host: "108.82.239.177",
+	port: 8003,
+	host: ip,
 };
 
 var socket = net.connect(options, () => {
 	console.log("connected to server");
-	var key = "";
 });
 
-socket.on("data", function (data) {
+function onErr() {
+	setTimeout(attemptReconnect, 5000);
+}
+
+function onDat(data) {
 	console.log(data.toString());
-});
+	io.emit("addr", ip);
+	io.emit("payload", data.toString());
+}
 
-socket.on("end", function () {
+function onEnd() {
 	console.log("disconnected from server");
-});
+	io.emit("dc");
+	setTimeout(attemptReconnect, 5000);
+}
+
+socket.on("data", onDat);
+socket.on("end", onEnd);
+
+function attemptReconnect() {
+	console.log("attempting to reconnect...");
+	io.emit("dc");
+	socket = net.connect(options, () => {
+		console.log("reconnected to server");
+	});
+	socket.on("error", onErr);
+	socket.on("data", onDat);
+	socket.on("end", onEnd);
+}
 
 app.get("/", (req, res) => {
 	res.sendFile(__dirname + "/index.html");
@@ -30,10 +53,4 @@ app.use("/res", express.static("res"));
 
 http.listen(80, () => {
 	console.log("listening on *:80");
-});
-
-io.on("connection", (sock) => {
-	sock.on("poll", () => {
-		console.log("poll requested");
-	});
 });
