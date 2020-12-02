@@ -4,7 +4,9 @@ var http = require("http").createServer(app);
 var io = require("socket.io")(http);
 var net = require("net");
 
-var ip = "127.0.0.1";
+var ip = "144.202.52.9";
+
+var buffer = "";
 
 var options = {
 	port: 8003,
@@ -21,8 +23,12 @@ function onErr() {
 
 function onDat(data) {
 	console.log(data.toString());
-	io.emit("addr", ip);
-	io.emit("payload", data.toString());
+	buffer = buffer + data.toString();
+	if(buffer.includes("end")) {
+		io.emit("addr", ip);
+		io.emit("payload", buffer);
+		buffer = "";
+	}
 }
 
 function onEnd() {
