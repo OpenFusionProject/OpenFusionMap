@@ -7,8 +7,8 @@
 			body {
 				width: 100%;
 				height: 100%;
-				background-color: red;
 				overflow: hidden;
+				background-color: rgb(8, 54, 88);
 				margin: 0;
 				padding: 0;
 			}
@@ -16,7 +16,7 @@
 			#main {
 				width: 100%;
 				height: 100%;
-				background-color: black;
+				background-color: rgb(8, 54, 88);
 			}
 
 			#source {
@@ -25,71 +25,191 @@
 		</style>
 		<script src="/socket.io/socket.io.js"></script>
 		<script>
-			document.addEventListener("click", onClick);
+			
+			// declare variables
 			var canvas;
-			var zoom = 1;
-			var x = 0.5;
-			var y = 0.5;
+
+			var zoom;
+			var x;
+			var y;
+
+			var tZoom;
+			var tX;
+			var tY;
+
+			var frameH;
+			var frameW;
+
+			var frameMinX;
+			var frameMaxX;
+			var frameMinY;
+			var frameMaxY;
+
+			var mapH;
+			var mapW;
+
 			var socket;
+			var ip = "127.0.0.1";
+
+			// constants
+			const inset = 40;
+			const zoomLimit = 1.75;
+			const zoomFactor = 1.4;
+
+			// load assets
+			var bg = new Image();
+			bg.src = "res/img/panelback.png";
+
+			var frame = new Image();
+			frame.src = "res/img/mapframe_notab.png";
+
+			var map = new Image();
+			map.src = "res/img/ff_full.png";
+
+			var clickSounds = [new Audio("res/snd/mouse_click01.ogg"), new Audio("res/snd/mouse_click02.ogg"), new Audio("res/snd/mouse_click03.ogg"), new Audio("res/snd/mouse_click04.ogg"), new Audio("res/snd/mouse_click05.ogg")];
+			var zoomSound = new Audio("res/snd/height_down.ogg");
+			var errorSound = new Audio("res/snd/no_button.ogg");
+
+			function playSound(type) {
+				var sound;
+
+				if(type == 1) {
+					sound = clickSounds[Math.floor(Math.random()*5)];
+					sound.volume = .5;
+				} else if(type == 2) {
+					sound = zoomSound;
+					sound.volume = 1;
+				} else if(type == 3) {
+					sound = errorSound;
+					sound.volume = .25;
+				}
+
+				sound.play();
+			}
+
+			function remap(cx, cy, z) {
+
+				if(z < 1 && zoom == 1)
+					return 3;
+				
+				zoom *= z;
+				if(zoom < 1) zoom = 1;
+
+				mapH = (map.height / zoomLimit) / zoom;
+				mapW = frameW / frameH * mapH;
+
+				var fracX = (cx - (frameMinX + inset)) / (frameMaxX - inset - (frameMinX + inset));
+				var fracY = (cy - (frameMinY + inset)) / (frameMaxY - inset - (frameMinY + inset));
+				
+				var mx = (x - mapW / 2) + fracX * mapW;
+				var my = (y - mapH / 2) + fracY * mapH;
+
+				if(zoom == 1) {
+					x = map.width / 2;
+					y = map.height / 2;
+					return 2;
+				}
+
+				x = mx;
+				y = my;
+				return 1;
+			}
 
 			function initialize() {
-				socket = io();
+				//socket = io();
+
+				document.addEventListener("click", onClick);
 
 				canvas = document.getElementById("main");
 				canvas.oncontextmenu = function (e) {
-					if (zoom > 1) zoom -= 1;
-					paint();
+					var ex = canvas.width / 2; //e.clientX;
+					var ey = canvas.height / 2; //e.clientY; 
+
+					if(ex >= frameMinX + inset && ex < frameMaxX - inset && ey >= frameMinY + inset && ey < frameMaxY - inset) {
+						playSound(remap(ex, ey, 1 / zoomFactor));
+						paint();
+					}
 					return false;
 				};
+
+				// initialize variables
+				zoom = 1;
+				x = map.width / 2;
+				y = map.height / 2;
 
 				var ctx = canvas.getContext("2d");
 				ctx.fillStyle = "#FFFFFF";
 				//ctx.translate(0.5, 0);
 
 				fitCanvas();
-				paint();
 			}
 
 			function fitCanvas() {
+				if(canvas == null)
+					return;
 				canvas.width = document.body.clientWidth;
 				canvas.height = document.body.clientHeight;
+
+				// update measurements
+				frameH = canvas.height * .8;
+				frameW = frame.width / frame.height * frameH;
+				if(frameW > .9 * canvas.width)
+					frameW = .9 * canvas.width;
+
+				frameMinX = canvas.width / 2 - frameW / 2;
+				frameMaxX = frameMinX + frameW;
+				frameMinY = canvas.height / 2 - frameH / 2;
+				frameMaxY = frameMinY + frameH;
+
+				mapH = map.height / zoomLimit;
+				mapW = frameW / frameH * mapH;
+				/*
+				mapW = map.width;
+				mapH = frameH / frameW * mapW;
+				*/
+
 				paint();
 			}
 
 			function onClick(e) {
-				console.log(e.clientX + ", " + e.clientY);
 				var ex = e.clientX;
 				var ey = e.clientY;
 
-				zoom += 1;
-				paint();
-				socket.emit("poll");
+				if(ex >= frameMinX + inset && ex < frameMaxX - inset && ey >= frameMinY + inset && ey < frameMaxY - inset) {
+					playSound(remap(ex, ey, zoomFactor));
+					paint();
+				}
+
+				//socket.emit("poll");
 			}
 
 			function paint() {
 				var ctx = canvas.getContext("2d");
-				w = canvas.width;
-				h = canvas.height;
+				var w = canvas.width;
+				var h = canvas.height;
 
 				ctx.fillStyle = "#000";
 				ctx.fillRect(0, 0, w, h);
 
-				var map = document.getElementById("source");
-				var mh = h;
-				var mw = mh * (map.width / map.height);
+				// background
+				ctx.drawImage(bg, 0, 0, w, h);
+				ctx.fillRect(frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
 
-				mh *= zoom;
-				mw *= zoom;
+				// map
+				ctx.drawImage(map, x - mapW / 2, y - mapH / 2, mapW, mapH,
+								frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
 
-				var cx = mw * x;
-				var cy = mh * y;
+				// frame
+				ctx.drawImage(frame, frameMinX, frameMinY, frameW, frameH);
 
-				ctx.drawImage(map, w / 2 - cx, h / 2 - cy, mw, mh);
+				// text
+				ctx.fillStyle = "#FFF";
+				ctx.font = "30px Courier New";
+				ctx.fillText(ip, frameMinX, frameMinY - inset / 4);
 			}
 		</script>
 	</head>
 	<body onload="initialize()" onresize="fitCanvas()">
-		<img id="source" src="res/img/ffmap.png" />
 		<canvas id="main"></canvas>
 	</body>
 </html>
