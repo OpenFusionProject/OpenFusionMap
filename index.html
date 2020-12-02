@@ -48,11 +48,21 @@
 			var mapH;
 			var mapW;
 
+			var scan2;
+			var timeout2;
+			var scan3;
+			var timeout3;
+
 			var socket;
 			var ip = "127.0.0.1";
 
 			// constants
-			const inset = 40;
+			const tps = 60;
+			const tickrate = 1000 / tps;
+			const scanFreq = 5;
+			const lerp = .3;
+			const snap = 5;
+			const inset = 5;
 			const zoomLimit = 1.75;
 			const zoomFactor = 1.4;
 
@@ -65,6 +75,13 @@
 
 			var map = new Image();
 			map.src = "res/img/ff_full.png";
+
+			var line1 = new Image();
+			line1.src = "res/img/line_main.png";
+			var line2 = new Image();
+			line2.src = "res/img/line_main00.png";
+			var line3 = new Image();
+			line3.src = "res/img/line_main01.png";
 
 			var clickSounds = [new Audio("res/snd/mouse_click01.ogg"), new Audio("res/snd/mouse_click02.ogg"), new Audio("res/snd/mouse_click03.ogg"), new Audio("res/snd/mouse_click04.ogg"), new Audio("res/snd/mouse_click05.ogg")];
 			var zoomSound = new Audio("res/snd/height_down.ogg");
@@ -87,14 +104,7 @@
 				sound.play();
 			}
 
-			function remap(cx, cy, z) {
-
-				if(z < 1 && zoom == 1)
-					return 3;
-				
-				zoom *= z;
-				if(zoom < 1) zoom = 1;
-
+			function remap(cx, cy) {
 				mapH = (map.height / zoomLimit) / zoom;
 				mapW = frameW / frameH * mapH;
 
@@ -105,14 +115,39 @@
 				var my = (y - mapH / 2) + fracY * mapH;
 
 				if(zoom == 1) {
-					x = map.width / 2;
-					y = map.height / 2;
-					return 2;
+					tX = map.width / 2;
+					tY = map.height / 2;
 				}
 
-				x = mx;
-				y = my;
-				return 1;
+				tX = mx;
+				tY = my;
+			}
+
+			function tick() {
+				if(timeout2 > 0) {
+					timeout2--;
+				} else {
+					scan2 += 2;
+					if(scan2 > frameMaxY - line2.height) {
+						scan2 = frameMinY - line2.height / 2;
+						timeout2 = tps * scanFreq;
+					}
+				}
+
+				if(timeout3 > 0) timeout3--;
+
+				x += Math.abs(tX - x) < snap ? 0 : (tX - x) * lerp;
+				y += Math.abs(tY - y) < snap ? 0 : (tY - y) * lerp;
+
+				paint();
+			}
+
+			function zoom(z) {
+				if(z < 1 && tZoom == 1)
+					return 3;
+				
+				tZoom *= z;
+				if(tZoom < 1) tZoom = 1;
 			}
 
 			function initialize() {
@@ -126,7 +161,9 @@
 					var ey = canvas.height / 2; //e.clientY; 
 
 					if(ex >= frameMinX + inset && ex < frameMaxX - inset && ey >= frameMinY + inset && ey < frameMaxY - inset) {
-						playSound(remap(ex, ey, 1 / zoomFactor));
+						tX = map.width / 2;
+						tY = map.height / 2;
+						playSound(1);
 						paint();
 					}
 					return false;
@@ -136,12 +173,21 @@
 				zoom = 1;
 				x = map.width / 2;
 				y = map.height / 2;
+				
+				tZoom = zoom;
+				tX = x;
+				tY = y;
+
+				timeout2 = 0;
+				timeout3 = 0;
 
 				var ctx = canvas.getContext("2d");
 				ctx.fillStyle = "#FFFFFF";
 				//ctx.translate(0.5, 0);
 
 				fitCanvas();
+
+				setInterval(tick, tickrate);
 			}
 
 			function fitCanvas() {
@@ -168,6 +214,8 @@
 				mapH = frameH / frameW * mapW;
 				*/
 
+				scan2 = frameMinY - line2.height / 2;
+
 				paint();
 			}
 
@@ -176,7 +224,8 @@
 				var ey = e.clientY;
 
 				if(ex >= frameMinX + inset && ex < frameMaxX - inset && ey >= frameMinY + inset && ey < frameMaxY - inset) {
-					playSound(remap(ex, ey, zoomFactor));
+					remap(ex, ey);
+					playSound(1);
 					paint();
 				}
 
@@ -198,6 +247,11 @@
 				// map
 				ctx.drawImage(map, x - mapW / 2, y - mapH / 2, mapW, mapH,
 								frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
+
+				// lines
+				ctx.drawImage(line1, frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
+				if(timeout2 == 0)
+					ctx.drawImage(line2, frameMinX + inset, scan2 + inset, frameW - 2*inset, line2.height - 2*inset);
 
 				// frame
 				ctx.drawImage(frame, frameMinX, frameMinY, frameW, frameH);
