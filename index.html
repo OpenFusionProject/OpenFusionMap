@@ -84,7 +84,8 @@
 			line3.src = "res/img/line_main01.png";
 
 			var clickSounds = [new Audio("res/snd/mouse_click01.ogg"), new Audio("res/snd/mouse_click02.ogg"), new Audio("res/snd/mouse_click03.ogg"), new Audio("res/snd/mouse_click04.ogg"), new Audio("res/snd/mouse_click05.ogg")];
-			var zoomSound = new Audio("res/snd/height_down.ogg");
+			var zoomOutSound = new Audio("res/snd/height_down.ogg");
+			var zoomInSound = new Audio("res/snd/height_up.ogg");
 			var errorSound = new Audio("res/snd/no_button.ogg");
 
 			function playSound(type) {
@@ -94,9 +95,12 @@
 					sound = clickSounds[Math.floor(Math.random()*5)];
 					sound.volume = .5;
 				} else if(type == 2) {
-					sound = zoomSound;
+					sound = zoomInSound;
 					sound.volume = 1;
 				} else if(type == 3) {
+					sound = zoomOutSound;
+					sound.volume = 1;
+				} else if(type == 4) {
 					sound = errorSound;
 					sound.volume = .25;
 				}
@@ -138,22 +142,41 @@
 
 				x += Math.abs(tX - x) < snap ? 0 : (tX - x) * lerp;
 				y += Math.abs(tY - y) < snap ? 0 : (tY - y) * lerp;
+				zoom += Math.abs(tZoom - zoom) < snap / 1000 ? 0 : (tZoom - zoom) * lerp;
+				mapH = (map.height / zoomLimit) / zoom;
+				mapW = frameW / frameH * mapH;
 
 				paint();
 			}
 
-			function zoom(z) {
-				if(z < 1 && tZoom == 1)
-					return 3;
+			function changeZoom(z) {
+				if(z < 1 && tZoom == 1) {
+					playSound(4);
+					return;
+				}
+
+				if(z > 1) playSound(2);
+				else if(z < 1) playSound(3);
 				
 				tZoom *= z;
 				if(tZoom < 1) tZoom = 1;
+			}
+
+			function onWheel(e) {
+				if(e.deltaY < 0) {
+					// zoom in
+					changeZoom(zoomFactor);
+				} else if(e.deltaY > 0) {
+					// zoom out
+					changeZoom(1 / zoomFactor);
+				}
 			}
 
 			function initialize() {
 				//socket = io();
 
 				document.addEventListener("click", onClick);
+				document.addEventListener("wheel", onWheel);
 
 				canvas = document.getElementById("main");
 				canvas.oncontextmenu = function (e) {
