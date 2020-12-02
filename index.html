@@ -336,6 +336,12 @@
 						ctx.drawImage(iconPlayer, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
 													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
 													size, size);
+
+						ctx.fillStyle = "#FFF";
+						ctx.font = "20px Courier New";
+						ctx.textAlign = "center";
+						ctx.fillText(tokens[3] + " " + tokens[4], frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
+																	frameMinY + inset + pFracY * (frameH - 2*inset) - size);
 					}
 				} else {
 					ctx.drawImage(fuzz[0], frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
