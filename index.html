@@ -24,10 +24,12 @@
 			}
 		</style>
 		<script src="/socket.io/socket.io.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"></script> 
 		<script>
-			
+
 			// declare variables
 			var canvas;
+			var buffer;
 
 			var dragging;
 
@@ -91,7 +93,9 @@
 			line3.src = "res/img/line_main01.png";
 
 			var iconPlayer = new Image();
-			iconPlayer.src = "res/img/face_yellow.png";
+			iconPlayer.src = "res/img/face.png";
+			var iconPlayerBorder = new Image();
+			iconPlayerBorder.src = "res/img/face_border.png";
 
 			var clickSounds = [new Audio("res/snd/mouse_click01.ogg"), new Audio("res/snd/mouse_click02.ogg"), new Audio("res/snd/mouse_click03.ogg"), new Audio("res/snd/mouse_click04.ogg"), new Audio("res/snd/mouse_click05.ogg")];
 			var zoomOutSound = new Audio("res/snd/height_down.ogg");
@@ -99,6 +103,7 @@
 			var errorSound = new Audio("res/snd/no_button.ogg");
 
 			// constants
+			const loadTime = new Date().getTime();
 			const tps = 60;
 			const tickrate = 1000 / tps;
 			const scanFreq = 5;
@@ -109,6 +114,26 @@
 			const zoomFactor = 1.4;
 			const zoomMin = 1;
 			const zoomMax = 30;
+			const iconMin = 16;
+			const iconMax = iconMin * Math.cbrt(zoomMax);
+			const iconAlpha = 0.75;
+
+			function getRandomBrightColor(seed) {
+
+				var rng = new Math.seedrandom(seed);
+
+				var h = rng.quick() * 360;
+				var s = 100;
+				var l = .4 + rng.quick() * .3;
+
+				const a = s * Math.min(l, 1 - l) / 100;
+				const f = n => {
+					const k = (n + h / 30) % 12;
+					const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+					return Math.round(255 * color).toString(16).padStart(2, '0');   // convert to Hex and prefix "0" if needed
+				};
+				return `#${f(0)}${f(8)}${f(4)}`;
+			}
 
 			function playSound(type) {
 				var sound;
@@ -252,6 +277,10 @@
 					return false;
 				};
 
+				buffer = document.createElement('canvas');
+				buffer.width = iconMax;
+				buffer.height = iconMax;
+
 				// initialize variables
 				zoom = 1;
 				x = map.width / 2;
@@ -263,10 +292,6 @@
 
 				timeout2 = 0;
 				timeout3 = 0;
-
-				var ctx = canvas.getContext("2d");
-				ctx.fillStyle = "#FFFFFF";
-				//ctx.translate(0.5, 0);
 
 				fitCanvas();
 
@@ -340,6 +365,7 @@
 								frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
 
 					// icons
+					var bufctx = buffer.getContext("2d");
 					for(var i = 0; i < players.length; i++) {
 						// map game coords to image coords (ty @dongresource)
 						var tokens = players[i].split(' ');
@@ -360,9 +386,23 @@
 						if(pFracX < 0 || pFracX > 1 || pFracY < 0 || pFracY > 1)
 							continue;
 
-						var size = iconPlayer.width * Math.cbrt(zoom);
-						
+						var size = iconMin + (zoom - zoomMin)*((iconMax - iconMin) / (zoomMax - zoomMin));
+
+						bufctx.fillStyle = getRandomBrightColor(tokens[3] + " " + tokens[4] + loadTime);
+						bufctx.globalCompositeOperation = "source-over";
+						bufctx.fillRect(0, 0, buffer.width, buffer.height);
+						bufctx.globalCompositeOperation = "destination-atop";
+						bufctx.drawImage(iconPlayer, 0, 0, size, size);
 						ctx.drawImage(iconPlayer, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
+													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
+													size, size);
+						ctx.globalAlpha = iconAlpha;
+						ctx.drawImage(buffer, 0, 0, size, size,
+													frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
+													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
+													size, size);
+						ctx.globalAlpha = 1.0;
+						ctx.drawImage(iconPlayerBorder, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
 													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
 													size, size);
 
