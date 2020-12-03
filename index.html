@@ -29,9 +29,16 @@
 			// declare variables
 			var canvas;
 
+			var dragging;
+
 			var zoom;
 			var x;
 			var y;
+
+			var lX;
+			var lY;
+			var lCX;
+			var lCY;
 
 			var tZoom;
 			var tX;
@@ -59,18 +66,6 @@
 			var connected;
 
 			var players = [];
-
-			// constants
-			const tps = 60;
-			const tickrate = 1000 / tps;
-			const scanFreq = 5;
-			const lerp = .3;
-			const snap = 5;
-			const inset = 5;
-			const zoomLimit = 1.75;
-			const zoomFactor = 1.4;
-			const zoomMin = 1;
-			const zoomMax = 30;
 
 			// load assets
 			var bg = new Image();
@@ -102,6 +97,18 @@
 			var zoomOutSound = new Audio("res/snd/height_down.ogg");
 			var zoomInSound = new Audio("res/snd/height_up.ogg");
 			var errorSound = new Audio("res/snd/no_button.ogg");
+
+			// constants
+			const tps = 60;
+			const tickrate = 1000 / tps;
+			const scanFreq = 5;
+			const lerp = .3;
+			const snap = 5;
+			const inset = 5;
+			const zoomLimit = 1.75;
+			const zoomFactor = 1.4;
+			const zoomMin = 1;
+			const zoomMax = 30;
 
 			function playSound(type) {
 				var sound;
@@ -196,17 +203,14 @@
 				ip = "";
 				connected = true;
 				socket.on("addr", function(addr) {
-					console.log(addr);
 					ip = addr;
 				});
 				socket.on("payload", function(pl) {
 					connected = true;
-					console.log(pl);
 					var start = pl.indexOf("begin") + 1;
 					var end = pl.indexOf("end");
 					if(start > 0 && end >= start) {
 						players = pl.slice(start, end);
-						console.log(players);
 					} else {
 						console.log("bad payload");
 					}
@@ -216,7 +220,22 @@
 					connected = false;
 				});
 
-				document.addEventListener("click", onClick);
+				dragging = false;
+
+				document.addEventListener("mousedown", e => {
+					if(e.button != 0 )
+						return;
+					lX = e.clientX;
+					lY = e.clientY;
+					var scaleW = mapW / (frameW - 2*inset); 
+					var scaleH = mapH / (frameH - 2*inset); 
+					lCX = x / scaleW;
+					lCY = y / scaleH;
+					dragging = true;
+					playSound(1);
+				});
+				document.addEventListener("mouseup", () => { dragging = false; });
+				document.addEventListener("mousemove", onDrag);
 				document.addEventListener("wheel", onWheel);
 
 				canvas = document.getElementById("main");
@@ -282,17 +301,25 @@
 				scan2 = frameMinY - line2.height / 2;
 			}
 
-			function onClick(e) {
-				var ex = e.clientX;
-				var ey = e.clientY;
+			function onDrag(e) {
+				if(!dragging)
+					return;
 
-				if(ex >= frameMinX + inset && ex < frameMaxX - inset && ey >= frameMinY + inset && ey < frameMaxY - inset) {
-					remap(ex, ey);
-					playSound(1);
-					paint();
-				}
+				console.log(lCX + " " + lCY);
+				
+				var dX = e.clientX - lX;
+				var dY = e.clientY - lY;
 
-				//socket.emit("poll");
+				var scaleW = mapW / (frameW - 2*inset); 
+				var scaleH = mapH / (frameH - 2*inset); 
+
+				x = (lCX - dX) * scaleW;
+				tX = x;
+
+				y = (lCY - dY) * scaleH;
+				tY = y;
+
+				paint();
 			}
 
 			function paint() {
