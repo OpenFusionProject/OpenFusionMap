@@ -3,6 +3,10 @@
 	<head>
 		<title>OpenFusion Server Map</title>
 		<style>
+			@font-face {
+				font-family: 'Jefferies';
+				src: url('res/jefferies.ttf');
+			}
 			html,
 			body {
 				width: 100%;
@@ -36,6 +40,9 @@
 			var zoom;
 			var x;
 			var y;
+
+			var mX;
+			var mY;
 
 			var lX;
 			var lY;
@@ -117,6 +124,7 @@
 			const iconMin = 16;
 			const iconMax = iconMin * Math.cbrt(zoomMax);
 			const iconAlpha = 0.75;
+			const padding = 10;
 
 			function getRandomBrightColor(seed) {
 
@@ -199,6 +207,29 @@
 				paint();
 			}
 
+			function onDrag(e) {
+
+				mX = e.clientX;
+				mY = e.clientY;
+
+				if(!dragging)
+					return;
+
+				var dX = e.clientX - lX;
+				var dY = e.clientY - lY;
+
+				var scaleW = mapW / (frameW - 2*inset); 
+				var scaleH = mapH / (frameH - 2*inset); 
+
+				x = (lCX - dX) * scaleW;
+				tX = x;
+
+				y = (lCY - dY) * scaleH;
+				tY = y;
+
+				paint();
+			}
+
 			function changeZoom(z) {
 				if(z < 1 && tZoom == zoomMin || z > 1 && tZoom == zoomMax) {
 					playSound(4);
@@ -248,7 +279,7 @@
 				dragging = false;
 
 				document.addEventListener("mousedown", e => {
-					if(e.button != 0 )
+					if(e.button != 0 || e.clientX < frameMinX + inset || e.clientX > frameMaxX - inset || e.clientY < frameMinY + inset || e.clientY > frameMaxY - inset)
 						return;
 					lX = e.clientX;
 					lY = e.clientY;
@@ -290,6 +321,9 @@
 				tX = x;
 				tY = y;
 
+				mX = -1;
+				mY = -1;
+
 				timeout2 = 0;
 				timeout3 = 0;
 
@@ -324,27 +358,6 @@
 				*/
 
 				scan2 = frameMinY - line2.height / 2;
-			}
-
-			function onDrag(e) {
-				if(!dragging)
-					return;
-
-				console.log(lCX + " " + lCY);
-				
-				var dX = e.clientX - lX;
-				var dY = e.clientY - lY;
-
-				var scaleW = mapW / (frameW - 2*inset); 
-				var scaleH = mapH / (frameH - 2*inset); 
-
-				x = (lCX - dX) * scaleW;
-				tX = x;
-
-				y = (lCY - dY) * scaleH;
-				tY = y;
-
-				paint();
 			}
 
 			function paint() {
@@ -406,11 +419,28 @@
 													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
 													size, size);
 
-						ctx.fillStyle = "#FFF";
-						ctx.font = "20px Courier New";
+						
+						
+						ctx.font = "18px Jefferies";
 						ctx.textAlign = "center";
-						ctx.fillText(tokens[3] + " " + tokens[4], frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
+						if(mX >= frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2 &&
+							mX <= frameMinX + inset + pFracX * (frameW - 2*inset) + size / 2 &&
+							mY >= frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2 &&
+							mY <= frameMinY + inset + pFracY * (frameH - 2*inset) + size / 2) {
+							
+							var name = tokens[3] + " " + tokens[4] + (tokens.length > 5 ? (" " + tokens[5]) : "");
+							var metrics = ctx.measureText(name);
+							var textWidth = metrics.width + padding;
+							var textHeight = (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) + padding;
+							// name tag
+							ctx.fillStyle = "#000";
+							ctx.fillRect(frameMinX + inset + pFracX * (frameW - 2*inset) - textWidth / 2,
+											frameMinY + inset + pFracY * (frameH - 2*inset) - size - textHeight + padding / 2,
+											textWidth, textHeight);
+							ctx.fillStyle = "#FFF";
+							ctx.fillText(name, frameMinX + inset + pFracX * (frameW - 2*inset),
 																	frameMinY + inset + pFracY * (frameH - 2*inset) - size);
+						}
 					}
 				} else {
 					ctx.drawImage(fuzz[0], frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
@@ -426,12 +456,12 @@
 
 				// text
 				ctx.fillStyle = "#FFF";
-				ctx.font = "30px Courier New";
+				ctx.font = "30px Jefferies";
 				ctx.textAlign = "left";
 				ctx.fillText(ip, frameMinX, frameMinY - inset);
 
 				if(!socket.connected || !connected) {
-					ctx.font = "22px Courier New";
+					ctx.font = "22px Jefferies";
 					ctx.textAlign = "center";
 					ctx.fillText("Reconnecting...", frameMinX + frameW / 2, frameMinY + frameH / 2);
 				}
