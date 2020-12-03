@@ -4,7 +4,8 @@ var http = require("http").createServer(app);
 var io = require("socket.io")(http);
 var net = require("net");
 
-var ip = "144.202.52.9";
+var ip = process.argv.length > 2 ? process.argv[2] : "127.0.0.1";
+var port = process.argv.length > 3 ? parseInt(process.argv[3]) : 8080;
 
 var buffer = [];
 
@@ -62,6 +63,6 @@ app.get("/", (req, res) => {
 
 app.use("/res", express.static("res"));
 
-http.listen(80, () => {
-	console.log("listening on *:80");
+http.listen(port, () => {
+	console.log("listening to " + ip + " on *:" + port);
 });
