@@ -6,7 +6,7 @@ var net = require("net");
 
 var ip = "144.202.52.9";
 
-var buffer = "";
+var buffer = [];
 
 var options = {
 	port: 8003,
@@ -23,11 +23,16 @@ function onErr() {
 
 function onDat(data) {
 	console.log(data.toString());
-	buffer = buffer + data.toString();
+	var tokens = data.toString().split('\n');
+	tokens.forEach(e => {
+		if(e.length > 0) buffer.push(e);
+	});
+	
 	if(buffer.includes("end")) {
+		console.log(buffer);
 		io.emit("addr", ip);
 		io.emit("payload", buffer);
-		buffer = "";
+		buffer = [];
 	}
 }
 

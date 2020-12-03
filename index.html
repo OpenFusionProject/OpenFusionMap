@@ -202,7 +202,6 @@
 				socket.on("payload", function(pl) {
 					connected = true;
 					console.log(pl);
-					pl = pl.split('\n');
 					var start = pl.indexOf("begin") + 1;
 					var end = pl.indexOf("end");
 					if(start > 0 && end >= start) {
