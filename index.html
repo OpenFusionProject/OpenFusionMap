@@ -222,9 +222,13 @@
 				var scaleH = mapH / (frameH - 2*inset); 
 
 				x = (lCX - dX) * scaleW;
+				if(x < 0) x = 0;
+				if(x > map.width) x = map.width;
 				tX = x;
 
 				y = (lCY - dY) * scaleH;
+				if(y < 0) y = 0;
+				if(y > map.height) y = map.height;
 				tY = y;
 
 				paint();
