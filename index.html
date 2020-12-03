@@ -69,6 +69,8 @@
 			const inset = 5;
 			const zoomLimit = 1.75;
 			const zoomFactor = 1.4;
+			const zoomMin = 1;
+			const zoomMax = 30;
 
 			// load assets
 			var bg = new Image();
@@ -166,7 +168,7 @@
 			}
 
 			function changeZoom(z) {
-				if(z < 1 && tZoom == 1) {
+				if(z < 1 && tZoom == zoomMin || z > 1 && tZoom == zoomMax) {
 					playSound(4);
 					return;
 				}
@@ -175,7 +177,8 @@
 				else if(z < 1) playSound(3);
 				
 				tZoom *= z;
-				if(tZoom < 1) tZoom = 1;
+				if(tZoom < zoomMin) tZoom = zoomMin;
+				if(tZoom > zoomMax) tZoom = zoomMax;
 			}
 
 			function onWheel(e) {
@@ -331,7 +334,7 @@
 						if(pFracX < 0 || pFracX > 1 || pFracY < 0 || pFracY > 1)
 							continue;
 
-						var size = iconPlayer.width * Math.sqrt(zoom);
+						var size = iconPlayer.width * Math.cbrt(zoom);
 						
 						ctx.drawImage(iconPlayer, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
 													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
