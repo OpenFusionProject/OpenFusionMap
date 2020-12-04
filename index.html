@@ -75,6 +75,7 @@
 			var connected;
 
 			var players = [];
+			var focused;
 
 			// load assets
 			var bg = new Image();
@@ -249,7 +250,6 @@
 					var targets = remap(mX, mY);
 					aX = targets[0];
 					aY = targets[1];
-					console.log(targets);
 					playSound(2);
 				} else if(z < 1) {
 					aX = x;
@@ -298,6 +298,7 @@
 				});
 
 				dragging = false;
+				focused = "";
 
 				document.addEventListener("mousedown", e => {
 					if(e.button != 0 || e.clientX < frameMinX + inset || e.clientX > frameMaxX - inset || e.clientY < frameMinY + inset || e.clientY > frameMaxY - inset)
@@ -310,6 +311,11 @@
 					lCY = y / scaleH;
 					dragging = true;
 					playSound(1);
+				});
+
+				document.addEventListener("click", e => {
+					var mapTarget = remap(e.clientX, e.clientY);
+
 				});
 				document.addEventListener("mouseup", () => { dragging = false; });
 				document.addEventListener("mousemove", onDrag);
@@ -381,6 +387,70 @@
 				scan2 = frameMinY - line2.height / 2;
 			}
 
+			function paintPlayer(tokens, bufctx, ctx) {
+				// map game coords to image coords (ty @dongresource)
+				if(tokens.length < 5 || tokens[0] != "player")
+					return;
+				var px = parseInt(tokens[1]);
+				var py = parseInt(tokens[2]);
+				px = px * 2048 / (16 * 51200);
+				py = py * 2048 / (16 * 51200);
+				if (px >= 2048 || py >= 2048 || px < 0 || py < 0)
+					return;
+				py = 2048 - py;
+
+				var minX = x - mapW / 2;
+				var minY = y - mapH / 2;
+				var pFracX = (px - minX) / mapW;
+				var pFracY = (py - minY) / mapH;
+				if(pFracX < 0 || pFracX > 1 || pFracY < 0 || pFracY > 1)
+					return;
+
+				var size = iconMin + (zoom - zoomMin)*((iconMax - iconMin) / (zoomMax - zoomMin));
+
+				bufctx.fillStyle = getRandomBrightColor(tokens[3] + " " + tokens[4] + loadTime);
+				bufctx.globalCompositeOperation = "source-over";
+				bufctx.fillRect(0, 0, buffer.width, buffer.height);
+				bufctx.globalCompositeOperation = "destination-atop";
+				bufctx.drawImage(iconPlayer, 0, 0, size, size);
+				ctx.drawImage(iconPlayer, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
+											frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
+											size, size);
+				ctx.globalAlpha = iconAlpha;
+				ctx.drawImage(buffer, 0, 0, size, size,
+											frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
+											frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
+											size, size);
+				ctx.globalAlpha = 1.0;
+				ctx.drawImage(iconPlayerBorder, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
+											frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
+											size, size);
+
+				
+				
+				ctx.font = "18px Jefferies";
+				ctx.textAlign = "center";
+				if(mX >= frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2 &&
+					mX <= frameMinX + inset + pFracX * (frameW - 2*inset) + size / 2 &&
+					mY >= frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2 &&
+					mY <= frameMinY + inset + pFracY * (frameH - 2*inset) + size / 2) {
+
+					var name = tokens[3] + " " + tokens[4] + (tokens.length > 5 ? (" " + tokens[5]) : "");
+					focused = name;
+					var metrics = ctx.measureText(name);
+					var textWidth = metrics.width + padding;
+					var textHeight = (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) + padding;
+					// name tag
+					ctx.fillStyle = "#000";
+					ctx.fillRect(frameMinX + inset + pFracX * (frameW - 2*inset) - textWidth / 2,
+									frameMinY + inset + pFracY * (frameH - 2*inset) - size - textHeight + padding / 2,
+									textWidth, textHeight);
+					ctx.fillStyle = "#FFF";
+					ctx.fillText(name, frameMinX + inset + pFracX * (frameW - 2*inset),
+															frameMinY + inset + pFracY * (frameH - 2*inset) - size);
+				}
+			}
+
 			function paint() {
 				var ctx = canvas.getContext("2d");
 				var w = canvas.width;
@@ -400,68 +470,17 @@
 
 					// icons
 					var bufctx = buffer.getContext("2d");
+					var fID = -1;
 					for(var i = 0; i < players.length; i++) {
-						// map game coords to image coords (ty @dongresource)
 						var tokens = players[i].split(' ');
-						if(tokens.length < 5 || tokens[0] != "player")
-							continue;
-						var px = parseInt(tokens[1]);
-						var py = parseInt(tokens[2]);
-						px = px * 2048 / (16 * 51200);
-						py = py * 2048 / (16 * 51200);
-						if (px >= 2048 || py >= 2048 || px < 0 || py < 0)
-							continue;
-						py = 2048 - py;
-
-						var minX = x - mapW / 2;
-						var minY = y - mapH / 2;
-						var pFracX = (px - minX) / mapW;
-						var pFracY = (py - minY) / mapH;
-						if(pFracX < 0 || pFracX > 1 || pFracY < 0 || pFracY > 1)
-							continue;
-
-						var size = iconMin + (zoom - zoomMin)*((iconMax - iconMin) / (zoomMax - zoomMin));
-
-						bufctx.fillStyle = getRandomBrightColor(tokens[3] + " " + tokens[4] + loadTime);
-						bufctx.globalCompositeOperation = "source-over";
-						bufctx.fillRect(0, 0, buffer.width, buffer.height);
-						bufctx.globalCompositeOperation = "destination-atop";
-						bufctx.drawImage(iconPlayer, 0, 0, size, size);
-						ctx.drawImage(iconPlayer, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
-													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
-													size, size);
-						ctx.globalAlpha = iconAlpha;
-						ctx.drawImage(buffer, 0, 0, size, size,
-													frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
-													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
-													size, size);
-						ctx.globalAlpha = 1.0;
-						ctx.drawImage(iconPlayerBorder, frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2,
-													frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2,
-													size, size);
-
-						
-						
-						ctx.font = "18px Jefferies";
-						ctx.textAlign = "center";
-						if(mX >= frameMinX + inset + pFracX * (frameW - 2*inset) - size / 2 &&
-							mX <= frameMinX + inset + pFracX * (frameW - 2*inset) + size / 2 &&
-							mY >= frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2 &&
-							mY <= frameMinY + inset + pFracY * (frameH - 2*inset) + size / 2) {
-							
-							var name = tokens[3] + " " + tokens[4] + (tokens.length > 5 ? (" " + tokens[5]) : "");
-							var metrics = ctx.measureText(name);
-							var textWidth = metrics.width + padding;
-							var textHeight = (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) + padding;
-							// name tag
-							ctx.fillStyle = "#000";
-							ctx.fillRect(frameMinX + inset + pFracX * (frameW - 2*inset) - textWidth / 2,
-											frameMinY + inset + pFracY * (frameH - 2*inset) - size - textHeight + padding / 2,
-											textWidth, textHeight);
-							ctx.fillStyle = "#FFF";
-							ctx.fillText(name, frameMinX + inset + pFracX * (frameW - 2*inset),
-																	frameMinY + inset + pFracY * (frameH - 2*inset) - size);
-						}
+						var name = tokens[3] + " " + tokens[4] + (tokens.length > 5 ? (" " + tokens[5]) : "");
+						if(name != focused) paintPlayer(tokens, bufctx, ctx);
+						else fID = i;
+					}
+					
+					if(fID > -1) {
+						var tokens = players[fID].split(' ');
+						paintPlayer(tokens, bufctx, ctx);
 					}
 				} else {
 					ctx.drawImage(fuzz[0], frameMinX + inset, frameMinY + inset, frameW - 2*inset, frameH - 2*inset);
