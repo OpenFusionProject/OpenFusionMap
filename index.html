@@ -157,7 +157,7 @@
 					sound.volume = 1;
 				} else if(type == 4) {
 					sound = errorSound;
-					sound.volume = .25;
+					sound.volume = .15;
 				}
 
 				sound.play();
@@ -173,13 +173,12 @@
 				var mx = (x - mapW / 2) + fracX * mapW;
 				var my = (y - mapH / 2) + fracY * mapH;
 
-				if(zoom == 1) {
-					tX = map.width / 2;
-					tY = map.height / 2;
-				}
+				if(mx < 0) mx = 0;
+				if(mx > map.width) mx = map.width;
+				if(my < 0) my = 0;
+				if(my > map.height) my = map.height;
 
-				tX = mx;
-				tY = my;
+				return [mx, my];
 			}
 
 			function tick() {
@@ -239,9 +238,27 @@
 					playSound(4);
 					return;
 				}
+				
+				var aX;
+				var aY;
 
-				if(z > 1) playSound(2);
-				else if(z < 1) playSound(3);
+				var scaleW = mapW / (frameW - 2*inset); 
+				var scaleH = mapH / (frameH - 2*inset); 
+
+				if(z > 1) {
+					var targets = remap(mX, mY);
+					aX = targets[0];
+					aY = targets[1];
+					console.log(targets);
+					playSound(2);
+				} else if(z < 1) {
+					aX = x;
+					aY = y;
+					playSound(3);
+				}
+
+				tX = aX;
+				tY = aY;
 				
 				tZoom *= z;
 				if(tZoom < zoomMin) tZoom = zoomMin;
