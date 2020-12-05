@@ -119,7 +119,7 @@
 			const snap = 5;
 			const inset = 5;
 			const zoomLimit = 1.75;
-			const zoomFactor = 1.4;
+			const zoomFactor = 1.1;
 			const zoomMin = 1;
 			const zoomMax = 30;
 			const iconMin = 16;
@@ -198,6 +198,12 @@
 
 				if(timeout3 > 0) timeout3--;
 
+				var cursor = "default";
+				if(mX > frameMinX + inset && mX < frameMaxX - inset && mY > frameMinY + inset && mY < frameMaxY - inset) {
+					cursor = dragging ? "grabbing" : "grab";
+				}
+				document.getElementById("main").style.cursor = cursor;
+
 				x += Math.abs(tX - x) < snap ? 0 : (tX - x) * lerp;
 				y += Math.abs(tY - y) < snap ? 0 : (tY - y) * lerp;
 				zoom += Math.abs(tZoom - zoom) < snap / 1000 ? 0 : (tZoom - zoom) * lerp;
@@ -263,6 +269,11 @@
 				tZoom *= z;
 				if(tZoom < zoomMin) tZoom = zoomMin;
 				if(tZoom > zoomMax) tZoom = zoomMax;
+
+				var mapHPredicted = (map.height / zoomLimit) / tZoom;
+				var mapWPredicted = frameW / frameH * mapHPredicted;
+				lCX = aX / (mapWPredicted / (frameW - 2*inset));
+				lCY = aY / (mapHPredicted / (frameH - 2*inset));
 			}
 
 			function onWheel(e) {
@@ -317,7 +328,9 @@
 					var mapTarget = remap(e.clientX, e.clientY);
 
 				});
-				document.addEventListener("mouseup", () => { dragging = false; });
+				document.addEventListener("mouseup", () => {
+					dragging = false;
+				});
 				document.addEventListener("mousemove", onDrag);
 				document.addEventListener("wheel", onWheel);
 
@@ -434,6 +447,8 @@
 					mX <= frameMinX + inset + pFracX * (frameW - 2*inset) + size / 2 &&
 					mY >= frameMinY + inset + pFracY * (frameH - 2*inset) - size / 2 &&
 					mY <= frameMinY + inset + pFracY * (frameH - 2*inset) + size / 2) {
+					
+					document.getElementById("main").style.cursor = "default";
 
 					var name = tokens[3] + " " + tokens[4] + (tokens.length > 5 ? (" " + tokens[5]) : "");
 					focused = name;
