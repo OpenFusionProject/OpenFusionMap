@@ -5,13 +5,15 @@ var io = require("socket.io")(http);
 var net = require("net");
 
 var ip = process.argv.length > 2 ? process.argv[2] : "127.0.0.1";
+if(!ip.includes(":")) ip += ":8003";
+
 var port = process.argv.length > 3 ? parseInt(process.argv[3]) : 8080;
 
 var buffer = [];
 
 var options = {
-	port: 8003,
-	host: ip,
+	port: ip.split(':')[1],
+	host: ip.split(':')[0]
 };
 
 var socket = net.connect(options, () => {
