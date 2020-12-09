@@ -119,7 +119,7 @@
 			const snap = 5;
 			const inset = 5;
 			const zoomLimit = 1.75;
-			const zoomFactor = 1.1;
+			const zoomFactor = 1.2;
 			const zoomMin = 1;
 			const zoomMax = 30;
 			const iconMin = 16;
@@ -252,16 +252,9 @@
 				var scaleW = mapW / (frameW - 2*inset); 
 				var scaleH = mapH / (frameH - 2*inset); 
 
-				if(z > 1) {
-					var targets = remap(mX, mY);
-					aX = targets[0];
-					aY = targets[1];
-					playSound(2);
-				} else if(z < 1) {
-					aX = x;
-					aY = y;
-					playSound(3);
-				}
+				aX = x;
+				aY = y;
+				playSound(z > 1 ? 2 : 3);
 
 				tX = aX;
 				tY = aY;
