@@ -24,14 +24,22 @@ function onErr() {
 	setTimeout(attemptReconnect, 5000);
 }
 
+const allowedEvents = ["begin", "end", "player"];
 function onDat(data) {
 	console.log(data.toString());
-	var tokens = data.toString().split('\n');
-	tokens.forEach(e => {
-		if(e.length > 0) buffer.push(e);
+	var lines = data.toString().split('\n');
+	lines.forEach(line => {
+		if (line.length < 1) return;
+		var tokens = line.split(' ');
+		if (tokens.length < 1) return;
+
+		var event = tokens[0];
+		if (allowedEvents.includes(event)) {
+			buffer.push(line);
+		}
 	});
-	
-	if(buffer.includes("end")) {
+
+	if (buffer.includes("end")) {
 		console.log(buffer);
 		io.emit("addr", ip);
 		io.emit("payload", buffer);
